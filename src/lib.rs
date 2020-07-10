@@ -9,6 +9,7 @@ use std::process;
 use std::collections::HashMap;
 
 mod error;
+mod image_process;
 
 pub fn run() -> error::Result<()> {
     let matches = App::new("soup")
@@ -27,6 +28,9 @@ pub fn run() -> error::Result<()> {
                     .arg(Arg::with_name("image_path")
                          .help("Path to image file")
                          .required(true))
+                    .arg(Arg::with_name("is_debug")
+                         .long("debug")
+                         .help("Save processed image to ./.tmp/ directory"))
                     .get_matches();
 
     let k: usize;
@@ -35,10 +39,12 @@ pub fn run() -> error::Result<()> {
         Some(val) => k = val.parse::<usize>()?,
     }
 
+    let is_debug = matches.is_present("is_debug");
     let is_mean = matches.is_present("is_mean");
     let image_path = matches.value_of("image_path").unwrap();
-    let image: RgbaImage = image::open(image_path)?.to_rgba();
+    let mut image: RgbaImage = image::open(image_path)?.to_rgba();
 
+    image_process::process_image(&mut image, is_debug);
     for c in kmean(k, is_mean, image)? {
         println!("{}", c.to_hex_string());
     }
