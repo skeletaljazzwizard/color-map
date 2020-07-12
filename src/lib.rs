@@ -13,7 +13,7 @@ mod error;
 mod image_process;
 
 pub fn run() -> error::Result<()> {
-    let matches = App::new("soup")
+    let matches = App::new("color_map")
                     .version("0.1.0")
                     .author("Alexander")
                     .about("tool find the most dominant colors in an image")
@@ -125,7 +125,7 @@ fn kmean(config: &Configuration, image: RgbaImage) -> error::Result<Vec<ColorCon
         }
 
         if change && iteration == max_iterations {
-            return Err(error::SoupError::MaxIterations(max_iterations))
+            return Err(error::ColorMapError::MaxIterations(max_iterations))
         }
 
         buffer = temp_buffer;

@@ -1,35 +1,35 @@
 // FIXME This would better solved by `anyhow`, `error-chain`, or `failure`
 use std::fmt;
 
-pub type Result<T> = std::result::Result<T, SoupError>;
+pub type Result<T> = std::result::Result<T, ColorMapError>;
 
 #[derive(Debug)]
-pub enum SoupError {
+pub enum ColorMapError {
     InvalidArgumentKError(std::num::ParseIntError), // invalid k value
     InvalidArgumentImageError(image::error::ImageError), // invalid image path or file type
     MaxIterations(i32), // reached max iterations
 }
 
-impl fmt::Display for SoupError {
+impl fmt::Display for ColorMapError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SoupError::InvalidArgumentKError(ref err) => write!(f, "K error: {}", err),
-            SoupError::InvalidArgumentImageError(ref err) => write!(f, "image error: {}", err),
-            SoupError::MaxIterations(ref count) => write!(f, "Kmeans max iterations limit of {} reached", count),
+            ColorMapError::InvalidArgumentKError(ref err) => write!(f, "K error: {}", err),
+            ColorMapError::InvalidArgumentImageError(ref err) => write!(f, "image error: {}", err),
+            ColorMapError::MaxIterations(ref count) => write!(f, "Kmeans max iterations limit of {} reached", count),
         }
     }
 }
 
-impl std::error::Error for SoupError {}
+impl std::error::Error for ColorMapError {}
 
-impl From<std::num::ParseIntError> for SoupError {
-    fn from(err: std::num::ParseIntError) -> SoupError {
-        SoupError::InvalidArgumentKError(err)
+impl From<std::num::ParseIntError> for ColorMapError {
+    fn from(err: std::num::ParseIntError) -> ColorMapError {
+        ColorMapError::InvalidArgumentKError(err)
     }
 }
 
-impl From<image::error::ImageError> for SoupError {
-    fn from(err: image::error::ImageError) -> SoupError {
-        SoupError::InvalidArgumentImageError(err)
+impl From<image::error::ImageError> for ColorMapError {
+    fn from(err: image::error::ImageError) -> ColorMapError {
+        ColorMapError::InvalidArgumentImageError(err)
     }
 }
