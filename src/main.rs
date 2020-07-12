@@ -1,5 +1,5 @@
 fn main() {
-    let res = soup::run();
+    let res = color_map::run();
     match res {
         Ok(()) => std::process::exit(0),
         Err(e) => {
