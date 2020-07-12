@@ -1,8 +1,10 @@
 use image::RgbaImage;
-use image::GenericImageView;
 use image::Rgba;
+use image::DynamicImage;
+use image::GenericImageView;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
+use crate::Configuration;
 
 #[derive(Debug)]
 struct BackgroundMask {
@@ -26,28 +28,27 @@ const DEFAULT_MASKS: [BackgroundMask; 2] = [
             threshold: 55,
         }
     ];
+
 struct Point(u32, u32);
-pub fn process_image(img: &mut RgbaImage, is_debug: bool) {
-    let (width, height) = img.dimensions();
-    if height == 0 || width == 0 {
-        // exit program because image is 0 height or 0 width
+
+pub fn process_image(mut image: DynamicImage, config: &Configuration) -> RgbaImage {
+    let (mut width, mut height) = image.dimensions();
+
+    if config.is_cropping {
+        width = width/2;
+        height = height/2;
+        image = image.crop(width/2, height/2, width, height);
     }
 
-    println!("bounds => {:?}", img.bounds());
+    let mut img = image.to_rgba();
     let mut points: Vec<Point> = vec![Point(0, 0), Point(width-1, 0), Point(0, height-1), Point(width-1, height-1)];
-    let masks: Vec<&BackgroundMask> = DEFAULT_MASKS.iter().filter(|m: &&BackgroundMask| points.iter().all(|p: &Point| debug_is_ignorable(img.get_pixel(p.0, p.1), m))).collect::<Vec<_>>();
-
-    println!("all masks = {:?}", masks);
+    let masks: Vec<&BackgroundMask> = DEFAULT_MASKS.iter().filter(|m: &&BackgroundMask| points.iter().all(|p: &Point| is_ignorable(img.get_pixel(p.0, p.1), m))).collect::<Vec<_>>();
 
     if masks.is_empty() {
-        return;
+        return img;
     }
 
     let selected_mask = masks.first().unwrap();
-    if is_debug {
-        println!("Mask image using {:?}", selected_mask);
-    }
-
 
     // process image outline to outline image from it's background according to found mask.
     while points.len() > 0 {
@@ -85,19 +86,15 @@ pub fn process_image(img: &mut RgbaImage, is_debug: bool) {
         }
     }
 
-    if is_debug {
+    if config.is_debug {
         // unwrapping here because debug mode.
         let temp_dir = "./.tmp";
         fs::create_dir_all(temp_dir).unwrap();
         let filename = format!("{}/tmp_{}.jpg", temp_dir, SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis());
         img.save(filename).unwrap();
-    }
-}
+    };
 
-fn debug_is_ignorable(p: &Rgba<u8>, mask: &BackgroundMask) -> bool {
-    println!("mask = {:?}", mask);
-    println!("pixel = {:?}", p);
-    is_ignorable(p, mask)
+    return img;
 }
 
 fn is_ignorable(p: &Rgba<u8>, mask: &BackgroundMask) -> bool {

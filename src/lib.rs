@@ -2,6 +2,7 @@ use clap::App;
 use clap::Arg;
 
 use image::RgbaImage;
+use image::DynamicImage;
 
 use rand::Rng;
 
@@ -28,6 +29,10 @@ pub fn run() -> error::Result<()> {
                     .arg(Arg::with_name("image_path")
                          .help("Path to image file")
                          .required(true))
+                    .arg(Arg::with_name("is_cropping")
+                         .short("c")
+                         .long("crop")
+                         .help("crop image borders by 25% (for images with object at center)"))
                     .arg(Arg::with_name("is_debug")
                          .long("debug")
                          .help("Save processed image to ./.tmp/ directory"))
@@ -39,16 +44,30 @@ pub fn run() -> error::Result<()> {
         Some(val) => k = val.parse::<usize>()?,
     }
 
-    let is_debug = matches.is_present("is_debug");
-    let is_mean = matches.is_present("is_mean");
-    let image_path = matches.value_of("image_path").unwrap();
-    let mut image: RgbaImage = image::open(image_path)?.to_rgba();
+    let config = Configuration {
+        is_debug: matches.is_present("is_debug"),
+        k,
+        is_mean: matches.is_present("is_mean"),
+        is_cropping: matches.is_present("is_cropping"),
+        image_path: matches.value_of("image_path").unwrap().to_owned(),
+    };
 
-    image_process::process_image(&mut image, is_debug);
-    for c in kmean(k, is_mean, image)? {
+    let image: DynamicImage = image::open(&config.image_path)?;
+
+    let processed_image: RgbaImage = image_process::process_image(image, &config);
+    for c in kmean(&config, processed_image)? {
         println!("{}", c.to_hex_string());
     }
     Ok(())
+}
+
+#[derive(Debug)]
+pub struct Configuration {
+    pub is_cropping: bool,
+    pub is_debug: bool,
+    pub is_mean: bool,
+    pub k: usize,
+    pub image_path: String,
 }
 
 #[derive(Debug, Copy, Clone)] 
@@ -65,7 +84,10 @@ impl ColorContainer {
     }
 }
 
-fn kmean(k: usize, is_mean: bool, image: RgbaImage) -> error::Result<Vec<ColorContainer>> {
+fn kmean(config: &Configuration, image: RgbaImage) -> error::Result<Vec<ColorContainer>> {
+    let k = config.k;
+    let is_mean = config.is_mean;
+
     let unique_colors: Vec<ColorContainer> = get_unique_colors(image);
 
     if unique_colors.is_empty() {
