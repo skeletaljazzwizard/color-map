@@ -8,6 +8,8 @@ use rand::Rng;
 
 use std::process;
 use std::collections::HashMap;
+use std::io::Write;
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 mod error;
 mod image_process;
@@ -56,7 +58,11 @@ pub fn run() -> error::Result<()> {
 
     let processed_image: RgbaImage = image_process::process_image(image, &config);
     for c in kmean(&config, processed_image)? {
-        println!("{}", c.to_hex_string());
+        // FIXME is this correct?
+        let mut stdout = StandardStream::stdout(ColorChoice::Always);
+        stdout.set_color(ColorSpec::new().set_bg(Some(Color::Rgb(c.r, c.g, c.b))))?;
+        writeln!(&mut stdout, "{}", c.to_hex_string())?;
+        stdout.reset()?;
     }
     Ok(())
 }
@@ -80,7 +86,7 @@ struct ColorContainer {
 
 impl ColorContainer {
     fn to_hex_string(&self) -> String {
-        format!("{:0>2X}{:0>2X}{:0>2X}", self.r, self.g, self.b,)
+        format!("#{:0>2X}{:0>2X}{:0>2X}", self.r, self.g, self.b,)
     }
 }
 
