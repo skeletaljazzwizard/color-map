@@ -42,13 +42,14 @@ pub fn process_image(mut image: DynamicImage, config: &Configuration) -> RgbaIma
 
     let mut img = image.to_rgba();
     let mut points: Vec<Point> = vec![Point(0, 0), Point(width-1, 0), Point(0, height-1), Point(width-1, height-1)];
-    let masks: Vec<&BackgroundMask> = DEFAULT_MASKS.iter().filter(|m: &&BackgroundMask| points.iter().all(|p: &Point| is_ignorable(img.get_pixel(p.0, p.1), m))).collect::<Vec<_>>();
+    let mask: Option<&BackgroundMask> = DEFAULT_MASKS.iter().find(|m: &&BackgroundMask| points.iter().all(|p: &Point| is_ignorable(img.get_pixel(p.0, p.1), m)));
 
-    if masks.is_empty() {
-        return img;
+    let selected_mask;
+    match mask {
+        Some(val) => selected_mask = val,
+        None => return img,
     }
 
-    let selected_mask = masks.first().unwrap();
 
     // process image outline to outline image from it's background according to found mask.
     while points.len() > 0 {
