@@ -165,6 +165,7 @@ fn kmeans(config: &Configuration, image: RgbaImage) -> error::Result<Vec<ColorCo
 
 
     centroids.sort();
+    centroids.reverse();
     Ok(centroids) 
 }
 
