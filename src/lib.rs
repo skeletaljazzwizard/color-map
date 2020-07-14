@@ -9,6 +9,8 @@ use rand::Rng;
 use std::process;
 use std::collections::HashMap;
 use std::io::Write;
+use std::cmp::Ordering;
+
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 mod error;
@@ -57,12 +59,14 @@ pub fn run() -> error::Result<()> {
     let image: DynamicImage = image::open(&config.image_path)?;
 
     let processed_image: RgbaImage = image_process::process_image(image, &config);
-    for c in kmean(&config, processed_image)? {
-        // FIXME is this correct?
+
+    for c in kmeans(&config, processed_image)? {
+        // FIXME is this correct? Reset then call writeln! to write new line feed without format
         let mut stdout = StandardStream::stdout(ColorChoice::Always);
         stdout.set_color(ColorSpec::new().set_bg(Some(Color::Rgb(c.r, c.g, c.b))))?;
-        writeln!(&mut stdout, "{}", c.to_hex_string())?;
+        write!(&mut stdout, "  {}  ", c.to_hex_string())?;
         stdout.reset()?;
+        writeln!(&mut stdout, "")?;
     }
     Ok(())
 }
@@ -76,6 +80,7 @@ pub struct Configuration {
     pub image_path: String,
 }
 
+// FIXME maybe remove copy & clone and use refs instead of cloning
 #[derive(Debug, Copy, Clone)] 
 struct ColorContainer {
     r: u8,
@@ -90,7 +95,27 @@ impl ColorContainer {
     }
 }
 
-fn kmean(config: &Configuration, image: RgbaImage) -> error::Result<Vec<ColorContainer>> {
+impl Ord for ColorContainer {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.count.cmp(&other.count)
+    }
+}
+
+impl PartialOrd for ColorContainer {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for ColorContainer {}
+
+impl PartialEq for ColorContainer {
+    fn eq(&self, other: &Self) -> bool {
+        self.count == other.count
+    }
+}
+
+fn kmeans(config: &Configuration, image: RgbaImage) -> error::Result<Vec<ColorContainer>> {
     let k = config.k;
     let is_mean = config.is_mean;
 
@@ -138,7 +163,9 @@ fn kmean(config: &Configuration, image: RgbaImage) -> error::Result<Vec<ColorCon
         centroids = calculate_centroids(&buffer, is_mean);
     }
 
-   Ok(centroids) 
+
+    centroids.sort();
+    Ok(centroids) 
 }
 
 fn get_unique_colors(image: RgbaImage) -> Vec<ColorContainer> {
@@ -172,7 +199,7 @@ fn kmeans_seeds(k: usize, colors: &Vec<ColorContainer>) -> Vec<ColorContainer> {
     let mut centroid_seeds: Vec<ColorContainer> = Vec::new();
 
     let selected_index = rand::thread_rng().gen_range(0, colors.len());
-    centroid_seeds.push(colors[selected_index].clone()); // FIXME is deref here bad?
+    centroid_seeds.push(colors[selected_index].clone());
 
     for _i in 1..k {
         let mut distances: Vec<f64> = Vec::new();
