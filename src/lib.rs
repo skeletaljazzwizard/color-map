@@ -16,6 +16,8 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 mod error;
 mod image_process;
 
+const MAX_ITERATIONS: i32 = 1000;
+
 pub fn run() -> error::Result<()> {
     let matches = App::new("color_map")
                     .version("0.1.0")
@@ -132,38 +134,35 @@ fn kmeans(config: &Configuration, image: RgbaImage) -> error::Result<Vec<ColorCo
     }
     let mut centroids: Vec<ColorContainer> = kmeans_seeds(k, &unique_colors);
 
-    let mut buffer: Vec<Vec<ColorContainer>> = Vec::with_capacity(k);
-    buffer.push(unique_colors);
+    let mut buffer: Vec<Vec<&ColorContainer>> = Vec::with_capacity(k);
+    buffer.push(unique_colors.iter().collect::<Vec<&ColorContainer>>());
     for _i in 1..k {
-        buffer.push(Vec::new());
+        buffer.push(Vec::new())
     }
 
-    let max_iterations: i32 = 1000;
-    for iteration in 1..=max_iterations {
+    for iteration in 1..=MAX_ITERATIONS {
         let mut change: bool = false;
-        let mut temp_buffer: Vec<Vec<ColorContainer>> = Vec::with_capacity(k);
+        let mut temp_buffer: Vec<Vec<&ColorContainer>> = Vec::with_capacity(k);
         for _i in 0..k {
             temp_buffer.push(Vec::new());
         }
         for i in 0..k {
-            for c in buffer[i].iter() {
-                let closest: usize = closest_centroid(c, &centroids);
-                temp_buffer[closest].push(c.clone());
+            for cc in buffer[i].iter() {
+                let closest: usize = closest_centroid(cc, &centroids);
+                temp_buffer[closest].push(cc);
                 if closest != i {
                     change = true;
                 }
             }
         }
 
-        if change && iteration == max_iterations {
-            return Err(error::ColorMapError::MaxIterations(max_iterations))
+        if change && iteration == MAX_ITERATIONS {
+            return Err(error::ColorMapError::MaxIterations(MAX_ITERATIONS))
         }
 
         buffer = temp_buffer;
         centroids = calculate_centroids(&buffer, is_mean);
     }
-
-
     centroids.sort();
     centroids.reverse();
     Ok(centroids) 
@@ -200,7 +199,8 @@ fn kmeans_seeds(k: usize, colors: &Vec<ColorContainer>) -> Vec<ColorContainer> {
     let mut centroid_seeds: Vec<ColorContainer> = Vec::new();
 
     let selected_index = rand::thread_rng().gen_range(0, colors.len());
-    centroid_seeds.push(colors[selected_index].clone());
+
+    centroid_seeds.push(colors[selected_index]);
 
     for _i in 1..k {
         let mut distances: Vec<f64> = Vec::new();
@@ -222,7 +222,7 @@ fn kmeans_seeds(k: usize, colors: &Vec<ColorContainer>) -> Vec<ColorContainer> {
         let mut cumulative_sum = 0.0;
         for (index, val) in distances.iter().enumerate() {
             if prob_point < cumulative_sum {
-                centroid_seeds.push(colors[index].clone());
+                centroid_seeds.push(colors[index]);
                 break;
             }
             cumulative_sum += val;
@@ -258,7 +258,7 @@ fn closest_centroid(point: &ColorContainer, centroids: &Vec<ColorContainer>) -> 
     index
 }
 
-fn calculate_centroids(buffer: &Vec<Vec<ColorContainer>>, is_mean: bool) -> Vec<ColorContainer>{
+fn calculate_centroids(buffer: &Vec<Vec<&ColorContainer>>, is_mean: bool) -> Vec<ColorContainer>{
     let mut new_centroids: Vec<ColorContainer> = Vec::new();
 
     for c in buffer {
@@ -274,12 +274,12 @@ fn calculate_centroids(buffer: &Vec<Vec<ColorContainer>>, is_mean: bool) -> Vec<
     new_centroids
 }
 
-fn mean(colors: &Vec<ColorContainer>) -> ColorContainer{
+fn mean(colors: &Vec<&ColorContainer>) -> ColorContainer{
     // FIXME ugly casting again
-    let r: u32 = colors.iter().map(|c: &ColorContainer| c.r as u32).sum();
-    let g: u32 = colors.iter().map(|c: &ColorContainer| c.g as u32).sum();
-    let b: u32 = colors.iter().map(|c: &ColorContainer| c.b as u32).sum();
-    let bucket_count: u32 = colors.iter().map(|c: &ColorContainer| c.count).sum();
+    let r: u32 = colors.iter().map(|c: &&ColorContainer| c.r as u32).sum();
+    let g: u32 = colors.iter().map(|c: &&ColorContainer| c.g as u32).sum();
+    let b: u32 = colors.iter().map(|c: &&ColorContainer| c.b as u32).sum();
+    let bucket_count: u32 = colors.iter().map(|c: &&ColorContainer| c.count).sum();
     let color_length: u32 = colors.len() as u32;
     ColorContainer {
         r: (r/color_length) as u8,
@@ -289,11 +289,11 @@ fn mean(colors: &Vec<ColorContainer>) -> ColorContainer{
     }
 }
 
-fn median(colors: &Vec<ColorContainer>) -> ColorContainer{
-    let mut rs: Vec<u8> = colors.iter().map(|c: &ColorContainer| c.r).collect();
-    let mut gs: Vec<u8> = colors.iter().map(|c: &ColorContainer| c.g).collect();
-    let mut bs: Vec<u8> = colors.iter().map(|c: &ColorContainer| c.b).collect();
-    let bucket_count: u32 = colors.iter().map(|c: &ColorContainer| c.count).sum();
+fn median(colors: &Vec<&ColorContainer>) -> ColorContainer{
+    let mut rs: Vec<u8> = colors.iter().map(|c: &&ColorContainer| c.r).collect();
+    let mut gs: Vec<u8> = colors.iter().map(|c: &&ColorContainer| c.g).collect();
+    let mut bs: Vec<u8> = colors.iter().map(|c: &&ColorContainer| c.b).collect();
+    let bucket_count: u32 = colors.iter().map(|c: &&ColorContainer| c.count).sum();
 
     let mut midpoint_r: u8 = 0;
     let mut midpoint_g: u8 = 0;
