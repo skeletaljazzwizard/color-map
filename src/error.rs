@@ -14,10 +14,10 @@ pub enum ColorMapError {
 impl fmt::Display for ColorMapError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ColorMapError::InvalidArgumentKError(ref err) => write!(f, "K error: {}", err),
-            ColorMapError::InvalidArgumentImageError(ref err) => write!(f, "image error: {}", err),
-            ColorMapError::MaxIterations(ref count) => write!(f, "Kmeans max iterations limit of {} reached", count),
-            ColorMapError::WriteColorError(ref err) => write!(f, "write color error: {}", err),
+            ColorMapError::InvalidArgumentKError(ref err) => writeln!(f, "K error: {}", err),
+            ColorMapError::InvalidArgumentImageError(ref err) => writeln!(f, "image error: {}", err),
+            ColorMapError::MaxIterations(ref count) => writeln!(f, "Kmeans max iterations limit of {} reached", count),
+            ColorMapError::WriteColorError(ref err) => writeln!(f, "write color error: {}", err),
         }
     }
 }
