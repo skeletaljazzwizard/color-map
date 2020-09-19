@@ -57,9 +57,6 @@ pub fn process_image(mut image: DynamicImage, config: &Configuration) -> RgbaIma
         let px = img.get_pixel_mut(p.0, p.1);
         if !is_transparent(px) && is_ignorable(px, selected_mask) {
             mark_pixel(px);
-            if !is_transparent(px) {
-                eprintln!("Error marking pixel {:?} at {}, {}", px, p.0, p.1);
-            }
 
             if 0 < p.0 {
                 if !is_transparent(img.get_pixel(p.0-1, p.1)) {
