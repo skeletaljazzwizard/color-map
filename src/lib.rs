@@ -233,7 +233,7 @@ fn kmeans_seeds(k: usize, colors: &Vec<ColorContainer>) -> Vec<ColorContainer> {
 }
 
 fn distance(centroid: &ColorContainer, point: &ColorContainer) -> f64 {
-    // FIXME ugly casting
+    // NOTE casting with `as` is fine upcasing u8 -> f64
     let r2 = point.r as f64;
     let g2 = point.g as f64;
     let b2 = point.b as f64;

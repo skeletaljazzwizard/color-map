@@ -54,8 +54,11 @@ pub fn process_image(mut image: DynamicImage, config: &Configuration) -> RgbaIma
     // process image outline to outline image from it's background according to found mask.
     while points.len() > 0 {
         let p = points.pop().unwrap();
-        let px = img.get_pixel_mut(p.0, p.1);
-        if !is_transparent(px) && is_ignorable(px, selected_mask) {
+            mark_pixel(px);
+            if !is_transparent(px) {
+                eprintln!("Error marking pixel {:?} at {}, {}", px, p.0, p.1);
+            }
+
             mark_pixel(px);
 
             if 0 < p.0 {
