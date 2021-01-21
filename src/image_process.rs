@@ -14,7 +14,7 @@ struct BackgroundMask {
     threshold: u8,
 }
 
-const DEFAULT_MASKS: [BackgroundMask; 2] = [
+const DEFAULT_MASKS: [BackgroundMask; 3] = [
         BackgroundMask {
             red: true,
             green: true,
@@ -26,6 +26,12 @@ const DEFAULT_MASKS: [BackgroundMask; 2] = [
             green: false,
             blue: false,
             threshold: 55,
+        },
+        BackgroundMask {
+            red: false,
+            green: true,
+            blue: false,
+            threshold: 200
         }
     ];
 
@@ -105,18 +111,21 @@ fn is_ignorable(p: &Rgba<u8>, mask: &BackgroundMask) -> bool {
         return true
     }
 
-
-    if !(mask.red || mask.green || mask.blue) {
-        if p[0] > mask.threshold || p[1] > mask.threshold || p[2] > mask.threshold {
-            return false
-        }
+    // check for black mask
+    if (!mask.red && p[0] > mask.threshold) || (!mask.green && p[1] > mask.threshold) || (!mask.blue && p[2] > mask.threshold) {
+        return false
     }
 
-     if mask.red && mask.green && mask.blue {
-        if p[0] < mask.threshold || p[1] < mask.threshold || p[2] < mask.threshold {
-            return false
-        }
+    // check for white mask
+    if (mask.red && p[0] < mask.threshold) || (mask.green && p[1] < mask.threshold) || (mask.blue && p[2] < mask.threshold) {
+        return false
     }
+
+    // check for color mask (green)
+    if !(mask.red && mask.green && mask.blue) {
+        // TODO Implement
+    }
+
     true
 }
 
